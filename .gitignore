@@ -1,0 +1,11 @@
+#Local directory
+**/.terraform/*
+
+#State files
+*.tfstate.*
+*.tfstate
+
+#Crushlog
+*.log
+
+.terraform.lock.hcl
