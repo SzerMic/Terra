@@ -92,5 +92,12 @@ variable "pc_net_interface" {
 variable "appname" {
   type    = string
   default = "appnamegg45o9"
-
+}
+variable "endname" {
+  type    = string
+  default = "priendpointnameconectorornot2"
+}
+variable "is_manual_connection" {
+  type    = bool
+  default = "false"
 }

@@ -4,3 +4,6 @@ variable "name" {
 variable "resource_group_name" {
   type = string
 }
+variable "virtual_network_id" {
+  type = string
+}

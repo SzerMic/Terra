@@ -11,8 +11,6 @@ provider "azurerm" {
   features {
   }
 }
-# disc_enc
-data "azurerm_client_config" "pc-client-config" {}
 
 # Tworzenie resources group
 module "ResourceGroup" {
@@ -37,6 +35,8 @@ resource "azurerm_subnet" "subnet" {
   virtual_network_name = module.Network.virtual_network_name_out
   name                 = var.subnetname
   address_prefixes     = var.subnetaddress
+
+  # enforce_private_link_endpoint_network_policies = true
 }
 # Tworzenie podsieci2
 resource "azurerm_subnet" "subnet2" {
@@ -70,31 +70,29 @@ resource "azurerm_network_security_group" "network_security_group" {
   tags = var.global_tags
 }
 #DNS 1
-module "dns123" {
+module "dns1" {
   source              = "./Network/DNS"
   name                = var.dnsname
   resource_group_name = module.ResourceGroup.resource_group_name_out
+  virtual_network_id  = module.Network.virtual_network_id
 }
 # DNS2
-module "dnsss" {
+module "dns2" {
   source              = "./Network/DNS"
   name                = var.dnsname2
   resource_group_name = module.ResourceGroup.resource_group_name_out
+  virtual_network_id  = module.Network.virtual_network_id
 }
-# # Podlinkowanie DNS-website
-# resource "azurerm_private_dns_zone_virtual_network_link" "pc_podliknowany_dns1" {
-#   name                  = var.linkdnsname
-#   resource_group_name   = module.ResourceGroup.resource_group_name_out
-#   private_dns_zone_name = module.dns123.dnsname
-#   virtual_network_id    = module.Network.virtual_network_id
-# }
-# # Podlinkowanie DNS-VM
-# resource "azurerm_private_dns_zone_virtual_network_link" "pc_podliknowany_dns2" {
-#   name                  = var.linkdnsname2
-#   resource_group_name   = module.ResourceGroup.resource_group_name_out
-#   private_dns_zone_name = module.dnsss.dnsname2
-#   virtual_network_id    = module.Network.virtual_network_id
-# }
+#Endpoint
+module "Endpoint" {
+  source                         = "./Network/Endpoint"
+  name                           = var.endname
+  location                       = module.ResourceGroup.resource_group_location_out
+  resource_group_name            = module.ResourceGroup.resource_group_name_out
+  is_manual_connection           = var.is_manual_connection
+  private_connection_resource_id = module.SQL_DB.SERVERID
+  subnet_id                      = azurerm_subnet.subnet.id
+}
 # App service plan
 resource "azurerm_service_plan" "pc_asp-FinApp-FE-PoC" {
   name                = "asp_FinApp-FE-PoC"
@@ -122,9 +120,9 @@ resource "azurerm_network_interface" "windows_nic" {
   resource_group_name = module.ResourceGroup.resource_group_name_out
 
   ip_configuration {
-    name                             = "firstconfigintip"
-    private_ip_address_allocation    = "Dynamic"
-    subnet_id                        = azurerm_subnet.subnet2.id
+    name                          = "firstconfigintip"
+    private_ip_address_allocation = "Dynamic"
+    subnet_id                     = azurerm_subnet.subnet2.id
   }
   tags = var.interfacetag
 }
@@ -141,25 +139,25 @@ module "VM-win" {
   # subnetid            = azurerm_subnet.subnet2.id
   network_interface_ids = [
     azurerm_network_interface.windows_nic.id,
-    ]
-  tags                = var.global_tags
+  ]
+  tags = var.global_tags
 }
 module "StorageAccount" {
-  source = "./StorageAccount"
-  name = "FirstSorage"
-  resource_group_name = module.ResourceGroup.resource_group_name_out
-  location = module.ResourceGroup.resource_group_location_out
-  account_tier = "Standard"
+  source                   = "./StorageAccount"
+  name                     = "FirstSorage"
+  resource_group_name      = module.ResourceGroup.resource_group_name_out
+  location                 = module.ResourceGroup.resource_group_location_out
+  account_tier             = "Standard"
   account_replication_type = "GRS"
 }
 module "SQL_DB" {
   source = "./SQL"
-  
-  namea = "Randomstringnametr345"
-  named = "Randomstringamsr26tr"
-  names = "Randomstgdskn65odlsxc"
-  localadmin = var.localadmin
-  adminpass = var.adminpass
-  location = module.ResourceGroup.resource_group_location_out
+
+  namea               = "Randomstringnametr345"
+  named               = "Randomstringamsr26tr"
+  names               = "Randomstgdskn65odlsxc"
+  localadmin          = var.localadmin
+  adminpass           = var.adminpass
+  location            = module.ResourceGroup.resource_group_location_out
   resource_group_name = module.ResourceGroup.resource_group_name_out
 }
